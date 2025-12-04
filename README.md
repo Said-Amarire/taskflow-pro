@@ -177,9 +177,9 @@ npm run build
 👉 https://your-slides-link.com
 
 ### 🧠 Best Practices Used
-Clean component architecture
-Modular reusable UI blocks
-Persistent data layer
+- Clean component architecture
+- Modular reusable UI blocks
+- Persistent data layer
 Optimized renders (no unnecessary re-renders)
 Semantic HTML + ARIA Labels
 Accessibility-focused UI

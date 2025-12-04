@@ -180,20 +180,20 @@ npm run build
 - Clean component architecture
 - Modular reusable UI blocks
 - Persistent data layer
-Optimized renders (no unnecessary re-renders)
-Semantic HTML + ARIA Labels
-Accessibility-focused UI
-100% responsive
-Professional commit messages
-Organized Git workflow
+- Optimized renders (no unnecessary re-renders)
+- Semantic HTML + ARIA Labels
+- Accessibility-focused UI
+- 100% responsive
+- Professional commit messages
+- Organized Git workflow
 
 ### 📌 Future Improvements
-Cloud sync
-User accounts
-Multiple boards
-Task categories
-Subtasks
-AI-based smart suggestions
+- Cloud sync
+- User accounts
+- Multiple boards
+- Task categories
+- Subtasks
+- AI-based smart suggestions
 
 ### 🏆 Author
 Said Amarire

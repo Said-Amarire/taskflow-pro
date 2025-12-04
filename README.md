@@ -167,16 +167,16 @@ npm run dev
 ### 4️⃣ Build for production
 npm run build
 
-## 🎞️ Demo Video
+### 🎞️ Demo Video
 👉 https://your-demo-video-link.com
 
-## 🎨 UI/UX Design (Figma)
+### 🎨 UI/UX Design (Figma)
 👉 https://your-figma-design-link.com
 
-## 🎤 Presentation Slides
+### 🎤 Presentation Slides
 👉 https://your-slides-link.com
 
-## 🧠 Best Practices Used
+### 🧠 Best Practices Used
 Clean component architecture
 Modular reusable UI blocks
 Persistent data layer

@@ -196,5 +196,5 @@ npm run build
 - AI-based smart suggestions
 
 ### 🏆 Author
-Said Amarire
-GitHub: https://github.com/Said-Amarire
+- Said Amarire
+- **GitHub:** https://github.com/Said-Amarire

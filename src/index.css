@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global variables */
+:root {
+  --primary: #06B6D4;
+  --brand: #0F172A;
+  --muted: #64748B;
+  --bg: #F8FAFC;
+  --accent: #4F46E5;
+}
+
+/* base styling */
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  @apply bg-bg text-brand font-inter;
+  margin: 0;
+}
+
+/* Scrollbar for Webkit browsers */
+::-webkit-scrollbar {
+  width: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f0f0f0;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--accent);
+  border-radius: 6px;
+  border: 3px solid #f0f0f0;
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) #f0f0f0;
+}
+
+/* components */
+.card { 
+  @apply bg-white rounded-lg shadow p-4; 
+}
+
+/* Container with responsive padding */
+.container { 
+  @apply max-w-6xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8;
+}

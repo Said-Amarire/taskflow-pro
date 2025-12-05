@@ -72,14 +72,14 @@ const DEFAULT_TONES = [
 ];
 
 // LocalStorage Key
-const SETTINGS_KEY = "tf_settings_v7";
+const SETTINGS_KEY = "tf_settings_v9";
 
 function loadSettings() {
   return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {
     enabled: true,
     volume: 80,
     selectedTone: DEFAULT_TONES[0].id,
-    repeatCount: 2,
+    alarmDuration: 60 // Default 1 minute
   };
 }
 
@@ -99,7 +99,7 @@ export default function Settings() {
   const defaultAudiosRef = useRef({});
   const [durations, setDurations] = useState({});
 
-  // Load custom sounds and their durations
+  // Load custom sounds
   useEffect(() => {
     getAllSoundsFromDB().then(sounds => {
       setCustomSounds(sounds.reverse());
@@ -112,7 +112,7 @@ export default function Settings() {
     });
   }, []);
 
-  // Preload default tones and durations
+  // Load default tones
   useEffect(() => {
     DEFAULT_TONES.forEach(tone => {
       const audio = new Audio(tone.url);
@@ -124,42 +124,31 @@ export default function Settings() {
     });
   }, []);
 
-  // Audio setup
+  // Setup audio
   useEffect(() => {
     audioRef.current.preload = "auto";
     audioRef.current.loop = false;
     audioRef.current.volume = settings.volume / 100;
-    audioRef.current.onended = () => {
-      if (settings.repeatCount > 1) {
-        let count = 1;
-        const repeat = () => {
-          if (count < settings.repeatCount) {
-            count++;
-            audioRef.current.currentTime = 0;
-            audioRef.current.play();
-          } else {
-            setPlayingTone(null);
-          }
-        };
-        repeat();
-      } else {
-        setPlayingTone(null);
-      }
-    };
+    audioRef.current.onended = () => setPlayingTone(null);
     return () => { try { audioRef.current.pause(); } catch {} };
-  }, [settings.repeatCount]);
+  }, []);
 
-  useEffect(() => { audioRef.current.volume = settings.volume / 100; }, [settings.volume]);
+  useEffect(() => {
+    audioRef.current.volume = settings.volume / 100;
+  }, [settings.volume]);
 
   const playTone = async (tone) => {
     if (!settings.enabled) return;
+
     try {
       if (playingTone === tone.id) {
         audioRef.current.pause();
         setPlayingTone(null);
         return;
       }
+
       audioRef.current.pause();
+
       if (tone.id.startsWith("custom:")) {
         const id = tone.id.split(":")[1];
         const item = customSounds.find(s => s.id === id);
@@ -168,8 +157,10 @@ export default function Settings() {
       } else {
         audioRef.current.src = defaultAudiosRef.current[tone.id].src;
       }
+
       audioRef.current.currentTime = 0;
-      await audioRef.current.play();
+      setTimeout(() => audioRef.current.play(), 80);
+
       setPlayingTone(tone.id);
     } catch (err) {
       console.log("Cannot play sound:", err);
@@ -188,26 +179,38 @@ export default function Settings() {
     const file = e.target.files[0];
     if (!file) return;
 
+    // Max size 2MB
+    if (file.size > 2 * 1024 * 1024) {
+      setMessage({ type: "error", text: "File too large (max 2MB)" });
+      e.target.value = "";
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = async () => {
       const dataURL = reader.result;
       const newId = uuidv4();
       const newItem = { id: newId, name: file.name, data: dataURL };
+
       try {
         await addSoundToDB(newItem);
         setCustomSounds(prev => [newItem, ...prev]);
         setSettings(prev => ({ ...prev, selectedTone: `custom:${newId}` }));
+
         const audio = new Audio(dataURL);
         audio.onloadedmetadata = () => {
           setDurations(prev => ({ ...prev, [newId]: audio.duration }));
         };
-        playTone({ id: `custom:${newId}` });
+
+        setTimeout(() => playTone({ id: `custom:${newId}` }), 120);
+
         setMessage({ type: "success", text: "Sound uploaded and saved!" });
       } catch (err) {
         console.log(err);
         setMessage({ type: "error", text: "Upload failed!" });
       }
     };
+
     reader.readAsDataURL(file);
     e.target.value = "";
   };
@@ -216,13 +219,16 @@ export default function Settings() {
     try {
       await removeSoundFromDB(id);
       setCustomSounds(prev => prev.filter(s => s.id !== id));
+
       if (settings.selectedTone === `custom:${id}`) {
         setSettings(prev => ({ ...prev, selectedTone: DEFAULT_TONES[0].id }));
       }
+
       if (playingTone === `custom:${id}`) {
         audioRef.current.pause();
         setPlayingTone(null);
       }
+
       setMessage({ type: "success", text: "Sound removed!" });
     } catch (err) {
       console.log(err);
@@ -237,6 +243,15 @@ export default function Settings() {
   };
 
   const isDisabledStyle = !settings.enabled ? "opacity-50 pointer-events-none" : "";
+
+  const ALARM_OPTIONS = [
+    30, 60, 90, 120, 180, 240, 300, 360, 420, 480, 540, 600, 900 // in seconds
+  ];
+
+  const formatDuration = (seconds) => {
+    if (seconds < 60) return `${seconds}s`;
+    return `${seconds / 60}min`;
+  }
 
   return (
     <div className="w-full min-h-screen flex justify-center px-0 md:px-6 py-2">
@@ -282,17 +297,22 @@ export default function Settings() {
               />
               <span className="w-14 text-right">{settings.volume}%</span>
             </div>
-            <div className="flex items-center gap-2 mt-2">
-              <label className="text-gray-700">Repeat Count:</label>
-              <input
-                type="number"
-                min="1"
-                max="10"
-                value={settings.repeatCount}
-                onChange={(e) => setSettings(prev => ({ ...prev, repeatCount: Number(e.target.value) }))}
-                className="w-16 border rounded px-2 py-1"
-              />
-            </div>
+          </div>
+        </div>
+
+        {/* Alarm Duration */}
+        <div className="border p-4 rounded-lg bg-gray-50">
+          <h2 className="font-semibold text-lg text-gray-700 mb-3">Alarm Duration</h2>
+          <div className={`flex flex-wrap items-center gap-3 ${isDisabledStyle}`}>
+            <select
+              value={settings.alarmDuration}
+              onChange={(e) => setSettings(prev => ({ ...prev, alarmDuration: Number(e.target.value) }))}
+              className="border rounded px-3 py-1 w-40"
+            >
+              {ALARM_OPTIONS.map(opt => (
+                <option key={opt} value={opt}>{formatDuration(opt)}</option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -330,6 +350,7 @@ export default function Settings() {
 
           <div className={`space-y-2 ${isDisabledStyle}`}>
             {customSounds.length === 0 && <div className="text-gray-400 text-sm">No custom sounds uploaded.</div>}
+
             {customSounds.map(item => (
               <div key={item.id} className={`flex items-center justify-between p-3 rounded ${settings.selectedTone === `custom:${item.id}` ? "bg-indigo-50" : "bg-slate-50"}`}>
                 <label className="flex items-center gap-2 w-full" style={{ wordBreak: "break-word", whiteSpace: "normal" }}>

@@ -7,6 +7,7 @@ import { load, save } from '../utils/storage'
 const NOTIFICATIONS_KEY = 'tf_notifications'
 const DB_NAME = 'TaskFlowDB'
 const STORE_NAME = 'custom_sounds'
+const FALLBACK_TONE = '/tones/tone1.mp3'
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -47,7 +48,10 @@ export default function Header() {
   const audioRef = useRef(new Audio())
   const prevUnreadCount = useRef(0)
   const audioStopped = useRef(false)
+  const audioPlaying = useRef(false)
   const popupRef = useRef(null)
+  const bellRef = useRef(null)
+  const alertBellRef = useRef(null)
 
   /* LOAD USER */
   useEffect(() => {
@@ -133,29 +137,50 @@ export default function Header() {
     return () => clearInterval(interval)
   }, [])
 
-  /* PLAY SOUND ONLY ON NEW NOTIFICATION */
+  /* PLAY SOUND ON NEW NOTIFICATION */
   useEffect(() => {
-    if (unreadCount > prevUnreadCount.current && !audioStopped.current) {
+    if (unreadCount > prevUnreadCount.current && !audioStopped.current && !audioPlaying.current) {
       const settings = load('tf_settings_v7', null)
-      if (!settings || !settings.enabled) return
-
       const audio = audioRef.current
       audio.pause()
+      audio.loop = true
 
-      let finalSrc = null
+      let finalSrc = FALLBACK_TONE
+      let finalVolume = 0.8
 
-      if (settings.selectedTone.startsWith("custom:")) {
-        const id = settings.selectedTone.replace("custom:", "")
-        const custom = customSounds.find(s => s.id === id)
-        if (custom && custom.data) finalSrc = custom.data
+      if (settings) {
+        if (!settings.enabled) return
+        finalVolume = settings.volume / 100
+        if (settings.selectedTone.startsWith('custom:')) {
+          const id = settings.selectedTone.replace('custom:', '')
+          const custom = customSounds.find(s => s.id === id)
+          if (custom && custom.data) finalSrc = custom.data
+        } else if (settings.selectedTone.startsWith('preset:')) {
+          finalSrc = `/tones/${settings.selectedTone.replace('preset:', '')}.mp3`
+        }
       }
 
-      if (!finalSrc) finalSrc = `/tones/${settings.selectedTone.replace('preset:', '')}.mp3`
-
       audio.src = finalSrc
-      audio.volume = settings.volume / 100
-      audio.loop = true
-      audio.play().catch(() => {})
+      audio.volume = finalVolume
+
+      audio.play().then(() => {
+        audioPlaying.current = true
+        if (alertBellRef.current) {
+          alertBellRef.current.classList.add('animate-ring-continuous')
+        }
+        if (bellRef.current) {
+          bellRef.current.classList.add('animate-ring')
+          setTimeout(() => bellRef.current.classList.remove('animate-ring'), 1500)
+        }
+      }).catch(() => {
+        const handleInteraction = () => {
+          audio.play().catch(() => {})
+          window.removeEventListener('click', handleInteraction)
+          window.removeEventListener('keydown', handleInteraction)
+        }
+        window.addEventListener('click', handleInteraction)
+        window.addEventListener('keydown', handleInteraction)
+      })
     }
 
     prevUnreadCount.current = unreadCount
@@ -172,10 +197,13 @@ export default function Header() {
   }
 
   const stopAlert = () => {
-    audioRef.current.pause()
-    audioRef.current.currentTime = 0
+    const audio = audioRef.current
+    audio.pause()
+    audio.currentTime = 0
     setActiveAlert(null)
     audioStopped.current = true
+    audioPlaying.current = false
+    if (alertBellRef.current) alertBellRef.current.classList.remove('animate-ring-continuous')
   }
 
   const snoozeAlert = () => {
@@ -198,13 +226,15 @@ export default function Header() {
   /* Close popup when clicking outside */
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (popupRef.current && !popupRef.current.contains(event.target)) {
+      if (popupRef.current && !popupRef.current.contains(event.target) && !bellRef.current.contains(event.target)) {
         setShowPopup(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  const togglePopup = () => setShowPopup(prev => !prev)
 
   return (
     <>
@@ -215,19 +245,17 @@ export default function Header() {
         }`}
       >
         <div className="w-full flex items-center justify-between px-6 py-1.5">
-          <img src={logoImg} alt="Logo" className="h-14 w-auto" />
+          <img src={logoImg} alt="Logo" className="h-12 md:h-14 w-auto" />
 
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-4 md:gap-5">
             <button
-              onClick={() => setShowPopup(!showPopup)}
-              className="relative text-indigo-600 text-3xl p-2 rounded-full hover:bg-indigo-100 transition shadow-md"
+              ref={bellRef}
+              onClick={togglePopup}
+              className="relative text-indigo-600 text-xl md:text-2xl p-1 md:p-2 rounded-full hover:bg-indigo-100 transition shadow-md border-2 border-purple-600"
             >
               <FiBell />
               {unreadCount > 0 && (
-                <span className="absolute bottom-0 right-0 w-4 h-1 bg-white rounded-full shadow-sm"></span>
-              )}
-              {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white rounded-full text-xs flex items-center justify-center">
+                <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 text-white rounded-full text-xs flex items-center justify-center animate-bounce">
                   {unreadCount}
                 </span>
               )}
@@ -238,11 +266,11 @@ export default function Header() {
             </div>
 
             {user.avatar ? (
-              <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-gray-200">
+              <div className="w-10 md:w-12 h-10 md:h-12 rounded-2xl overflow-hidden border-2 border-gray-200">
                 <img src={user.avatar} className="w-full h-full object-cover" />
               </div>
             ) : (
-              <FiUser className="text-gray-500 w-14 h-14 bg-gray-100 p-2 rounded-2xl" />
+              <FiUser className="text-gray-500 w-10 md:w-12 h-10 md:h-12 bg-gray-100 p-2 rounded-2xl" />
             )}
           </div>
         </div>
@@ -251,38 +279,38 @@ export default function Header() {
       <div className="h-[62px] md:h-[70px]"></div>
 
       {/* POPUP */}
-      {showPopup && (
-        <div
-          ref={popupRef}
-          className="fixed top-16 right-5 w-80 max-h-[400px] bg-gradient-to-b from-purple-700 via-black to-white border shadow-xl rounded-2xl p-4 z-[9999] overflow-y-auto animate-popup-in"
-        >
-          <h3 className="font-bold mb-3 text-white text-lg">Notifications</h3>
-          {notifications.filter(n => !n.read).length === 0 ? (
-            <p className="text-gray-200">No new notifications</p>
-          ) : (
-            notifications.filter(n => !n.read).map(n => (
-              <div key={n.id} className="border-b border-purple-400 pb-2 mb-2 flex justify-between items-center">
-                <div>
-                  <strong className="text-white">{n.title}</strong>
-                  <div className="text-xs text-gray-200">{new Date(n.due).toLocaleString()}</div>
-                </div>
-                <button
-                  onClick={() => markAsRead(n.id)}
-                  className="text-green-400 p-1 hover:bg-green-600 hover:text-white rounded transition"
-                >
-                  <FiCheck />
-                </button>
+      <div
+        ref={popupRef}
+        className={`fixed top-16 right-5 w-80 max-h-[400px] bg-white/20 backdrop-blur-md border border-purple-600 shadow-xl rounded-2xl p-4 z-[9999] overflow-y-auto transform transition-all duration-300 ease-in-out
+          ${showPopup ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-4 pointer-events-none'}
+        `}
+      >
+        <h3 className="font-bold mb-3 text-gray-800 text-lg">Notifications</h3>
+        {notifications.filter(n => !n.read).length === 0 ? (
+          <p className="text-gray-500">No new notifications</p>
+        ) : (
+          notifications.filter(n => !n.read).map(n => (
+            <div key={n.id} className="border-b border-purple-300/50 pb-2 mb-2 flex justify-between items-center">
+              <div>
+                <strong className="text-gray-800">{n.title}</strong>
+                <div className="text-xs text-gray-500">{new Date(n.due).toLocaleString()}</div>
               </div>
-            ))
-          )}
-        </div>
-      )}
+              <button
+                onClick={() => markAsRead(n.id)}
+                className="text-green-500 p-1 hover:bg-green-600 hover:text-white rounded transition"
+              >
+                <FiCheck />
+              </button>
+            </div>
+          ))
+        )}
+      </div>
 
       {/* BIG ALERT */}
       {activeAlert && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[10000]">
           <div className="bg-white p-6 rounded-xl shadow-xl text-center w-[90%] max-w-md">
-            <FiBell className="text-indigo-600 text-6xl mb-3 shake-strong" />
+            <FiBell ref={alertBellRef} className="text-indigo-600 text-6xl mb-3 animate-ring-continuous" />
             <h2 className="text-2xl font-bold mb-2">{activeAlert.title}</h2>
             <p className="text-gray-600 mb-4 flex items-center justify-center gap-2">
               <FiClock /> {new Date(activeAlert.due).toLocaleString()}
@@ -308,19 +336,25 @@ export default function Header() {
 
       {/* Animations */}
       <style jsx>{`
-        .animate-popup-in {
-          animation: popupIn 0.4s ease forwards;
+        .animate-ring {
+          animation: ringBell 1.5s ease;
         }
-        .animate-popup-out {
-          animation: popupOut 0.3s ease forwards;
+        .animate-ring-continuous {
+          animation: ringBellContinuous 0.8s infinite alternate;
         }
-        @keyframes popupIn {
-          0% { opacity: 0; transform: translateY(-10px); }
-          100% { opacity: 1; transform: translateY(0); }
+        @keyframes ringBell {
+          0% { transform: rotate(0deg); }
+          15% { transform: rotate(15deg); }
+          30% { transform: rotate(-15deg); }
+          45% { transform: rotate(10deg); }
+          60% { transform: rotate(-10deg); }
+          75% { transform: rotate(5deg); }
+          100% { transform: rotate(0deg); }
         }
-        @keyframes popupOut {
-          0% { opacity: 1; transform: translateY(0); }
-          100% { opacity: 0; transform: translateY(-10px); }
+        @keyframes ringBellContinuous {
+          0% { transform: rotate(-10deg); }
+          50% { transform: rotate(10deg); }
+          100% { transform: rotate(-10deg); }
         }
       `}</style>
     </>

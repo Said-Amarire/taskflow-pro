@@ -72,13 +72,14 @@ const DEFAULT_TONES = [
 ];
 
 // LocalStorage Key
-const SETTINGS_KEY = "tf_settings_v8";
+const SETTINGS_KEY = "tf_settings_v7";
 
 function loadSettings() {
   return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {
     enabled: true,
     volume: 80,
     selectedTone: DEFAULT_TONES[0].id,
+    repeatCount: 2,
   };
 }
 
@@ -98,7 +99,7 @@ export default function Settings() {
   const defaultAudiosRef = useRef({});
   const [durations, setDurations] = useState({});
 
-  // Load custom sounds
+  // Load custom sounds and their durations
   useEffect(() => {
     getAllSoundsFromDB().then(sounds => {
       setCustomSounds(sounds.reverse());
@@ -111,7 +112,7 @@ export default function Settings() {
     });
   }, []);
 
-  // Load default tones
+  // Preload default tones and durations
   useEffect(() => {
     DEFAULT_TONES.forEach(tone => {
       const audio = new Audio(tone.url);
@@ -123,31 +124,42 @@ export default function Settings() {
     });
   }, []);
 
-  // Setup audio
+  // Audio setup
   useEffect(() => {
     audioRef.current.preload = "auto";
     audioRef.current.loop = false;
     audioRef.current.volume = settings.volume / 100;
-    audioRef.current.onended = () => setPlayingTone(null);
+    audioRef.current.onended = () => {
+      if (settings.repeatCount > 1) {
+        let count = 1;
+        const repeat = () => {
+          if (count < settings.repeatCount) {
+            count++;
+            audioRef.current.currentTime = 0;
+            audioRef.current.play();
+          } else {
+            setPlayingTone(null);
+          }
+        };
+        repeat();
+      } else {
+        setPlayingTone(null);
+      }
+    };
     return () => { try { audioRef.current.pause(); } catch {} };
-  }, []);
+  }, [settings.repeatCount]);
 
-  useEffect(() => {
-    audioRef.current.volume = settings.volume / 100;
-  }, [settings.volume]);
+  useEffect(() => { audioRef.current.volume = settings.volume / 100; }, [settings.volume]);
 
   const playTone = async (tone) => {
     if (!settings.enabled) return;
-
     try {
       if (playingTone === tone.id) {
         audioRef.current.pause();
         setPlayingTone(null);
         return;
       }
-
       audioRef.current.pause();
-
       if (tone.id.startsWith("custom:")) {
         const id = tone.id.split(":")[1];
         const item = customSounds.find(s => s.id === id);
@@ -156,10 +168,8 @@ export default function Settings() {
       } else {
         audioRef.current.src = defaultAudiosRef.current[tone.id].src;
       }
-
       audioRef.current.currentTime = 0;
-      setTimeout(() => audioRef.current.play(), 80);
-
+      await audioRef.current.play();
       setPlayingTone(tone.id);
     } catch (err) {
       console.log("Cannot play sound:", err);
@@ -178,9 +188,10 @@ export default function Settings() {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Max size 2MB
-    if (file.size > 2 * 1024 * 1024) {
-      setMessage({ type: "error", text: "File too large (max 2MB)" });
+    // New: check file size (max 2MB)
+    const maxSizeMB = 2;
+    if (file.size > maxSizeMB * 1024 * 1024) {
+      setMessage({ type: "error", text: `File exceeds ${maxSizeMB}MB limit.` });
       e.target.value = "";
       return;
     }
@@ -190,26 +201,22 @@ export default function Settings() {
       const dataURL = reader.result;
       const newId = uuidv4();
       const newItem = { id: newId, name: file.name, data: dataURL };
-
       try {
         await addSoundToDB(newItem);
         setCustomSounds(prev => [newItem, ...prev]);
         setSettings(prev => ({ ...prev, selectedTone: `custom:${newId}` }));
-
         const audio = new Audio(dataURL);
         audio.onloadedmetadata = () => {
           setDurations(prev => ({ ...prev, [newId]: audio.duration }));
         };
-
-        setTimeout(() => playTone({ id: `custom:${newId}` }), 120);
-
+        // Play the uploaded sound immediately
+        playTone({ id: `custom:${newId}` });
         setMessage({ type: "success", text: "Sound uploaded and saved!" });
       } catch (err) {
         console.log(err);
         setMessage({ type: "error", text: "Upload failed!" });
       }
     };
-
     reader.readAsDataURL(file);
     e.target.value = "";
   };
@@ -218,16 +225,13 @@ export default function Settings() {
     try {
       await removeSoundFromDB(id);
       setCustomSounds(prev => prev.filter(s => s.id !== id));
-
       if (settings.selectedTone === `custom:${id}`) {
         setSettings(prev => ({ ...prev, selectedTone: DEFAULT_TONES[0].id }));
       }
-
       if (playingTone === `custom:${id}`) {
         audioRef.current.pause();
         setPlayingTone(null);
       }
-
       setMessage({ type: "success", text: "Sound removed!" });
     } catch (err) {
       console.log(err);
@@ -287,6 +291,17 @@ export default function Settings() {
               />
               <span className="w-14 text-right">{settings.volume}%</span>
             </div>
+            <div className="flex items-center gap-2 mt-2">
+              <label className="text-gray-700">Repeat Count:</label>
+              <input
+                type="number"
+                min="1"
+                max="10"
+                value={settings.repeatCount}
+                onChange={(e) => setSettings(prev => ({ ...prev, repeatCount: Number(e.target.value) }))}
+                className="w-16 border rounded px-2 py-1"
+              />
+            </div>
           </div>
         </div>
 
@@ -324,7 +339,6 @@ export default function Settings() {
 
           <div className={`space-y-2 ${isDisabledStyle}`}>
             {customSounds.length === 0 && <div className="text-gray-400 text-sm">No custom sounds uploaded.</div>}
-
             {customSounds.map(item => (
               <div key={item.id} className={`flex items-center justify-between p-3 rounded ${settings.selectedTone === `custom:${item.id}` ? "bg-indigo-50" : "bg-slate-50"}`}>
                 <label className="flex items-center gap-2 w-full" style={{ wordBreak: "break-word", whiteSpace: "normal" }}>

@@ -72,14 +72,13 @@ const DEFAULT_TONES = [
 ];
 
 // LocalStorage Key
-const SETTINGS_KEY = "tf_settings_v9";
+const SETTINGS_KEY = "tf_settings_v8";
 
 function loadSettings() {
   return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {
     enabled: true,
     volume: 80,
     selectedTone: DEFAULT_TONES[0].id,
-    alarmDuration: 60 // Default 1 minute
   };
 }
 
@@ -244,15 +243,6 @@ export default function Settings() {
 
   const isDisabledStyle = !settings.enabled ? "opacity-50 pointer-events-none" : "";
 
-  const ALARM_OPTIONS = [
-    30, 60, 90, 120, 180, 240, 300, 360, 420, 480, 540, 600, 900 // in seconds
-  ];
-
-  const formatDuration = (seconds) => {
-    if (seconds < 60) return `${seconds}s`;
-    return `${seconds / 60}min`;
-  }
-
   return (
     <div className="w-full min-h-screen flex justify-center px-0 md:px-6 py-2">
       <div className="w-full max-w-5xl bg-white rounded-2xl shadow-md border border-indigo-50 p-4 flex flex-col gap-6">
@@ -297,22 +287,6 @@ export default function Settings() {
               />
               <span className="w-14 text-right">{settings.volume}%</span>
             </div>
-          </div>
-        </div>
-
-        {/* Alarm Duration */}
-        <div className="border p-4 rounded-lg bg-gray-50">
-          <h2 className="font-semibold text-lg text-gray-700 mb-3">Alarm Duration</h2>
-          <div className={`flex flex-wrap items-center gap-3 ${isDisabledStyle}`}>
-            <select
-              value={settings.alarmDuration}
-              onChange={(e) => setSettings(prev => ({ ...prev, alarmDuration: Number(e.target.value) }))}
-              className="border rounded px-3 py-1 w-40"
-            >
-              {ALARM_OPTIONS.map(opt => (
-                <option key={opt} value={opt}>{formatDuration(opt)}</option>
-              ))}
-            </select>
           </div>
         </div>
 

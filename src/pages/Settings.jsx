@@ -77,13 +77,15 @@ const SETTINGS_KEY = "tf_settings_v7";
 function loadSettings() {
   const stored = JSON.parse(localStorage.getItem(SETTINGS_KEY));
   if (stored) return stored;
-  // Default settings at first load
-  return {
+  // Default settings for first launch
+  const defaultSettings = {
     enabled: true,
     volume: 80,
-    selectedTone: DEFAULT_TONES[0].id, // default first tone
+    selectedTone: DEFAULT_TONES[0].id, // first tone by default
     repeatCount: 2,
   };
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(defaultSettings));
+  return defaultSettings;
 }
 
 function saveSettings(settings) {
@@ -106,38 +108,40 @@ export default function Settings() {
   // Load custom sounds and merge with defaults
   useEffect(() => {
     getAllSoundsFromDB().then(sounds => {
-      const reversed = sounds.reverse();
+      const reversed = sounds.reverse().map(s => ({ ...s, id: `custom:${s.id}` }));
       setCustomSounds(reversed);
 
-      const merged = [...DEFAULT_TONES, ...reversed.map(s => ({ id: `custom:${s.id}`, label: s.name, url: s.data }))];
+      const merged = [...DEFAULT_TONES, ...reversed.map(s => ({ id: s.id, label: s.name, url: s.data }))];
       setAllTones(merged);
 
-      merged.forEach(item => {
+      // Prioritize loading first tone for immediate playback
+      if (merged.length > 0 && !audioRef.current.src) {
+        const firstTone = merged[0];
+        audioRef.current.src = firstTone.url;
+        audioRef.current.preload = "auto";
+        audioRef.current.volume = settings.volume / 100;
+        audioRef.current.onloadedmetadata = () => {
+          setDurations(prev => ({ ...prev, [firstTone.id]: audioRef.current.duration }));
+          setPlayingTone(firstTone.id);
+        };
+      }
+
+      // Load rest of audios in background
+      merged.forEach((item, idx) => {
+        if (idx === 0) return; // first one handled
         const audio = new Audio(item.url);
+        audio.preload = "auto";
         audio.onloadedmetadata = () => {
           setDurations(prev => ({ ...prev, [item.id]: audio.duration }));
         };
+        defaultAudiosRef.current[item.id] = audio;
       });
-    });
-  }, []);
-
-  // Preload default tones
-  useEffect(() => {
-    DEFAULT_TONES.forEach(tone => {
-      const audio = new Audio(tone.url);
-      audio.preload = "auto";
-      defaultAudiosRef.current[tone.id] = audio;
-      audio.onloadedmetadata = () => {
-        setDurations(prev => ({ ...prev, [tone.id]: audio.duration }));
-      };
     });
   }, []);
 
   // Audio setup
   useEffect(() => {
-    audioRef.current.preload = "auto";
     audioRef.current.loop = false;
-    audioRef.current.volume = settings.volume / 100;
     audioRef.current.onended = () => {
       if (settings.repeatCount > 1) {
         let count = 1;
@@ -160,7 +164,6 @@ export default function Settings() {
 
   useEffect(() => { audioRef.current.volume = settings.volume / 100; }, [settings.volume]);
 
-  // Play tone function
   const playTone = async (tone) => {
     if (!settings.enabled) return;
     try {
@@ -170,14 +173,7 @@ export default function Settings() {
         return;
       }
       audioRef.current.pause();
-      if (tone.id.startsWith("custom:")) {
-        const id = tone.id.split(":")[1];
-        const item = customSounds.find(s => s.id === id);
-        if (!item) return;
-        audioRef.current.src = item.data;
-      } else {
-        audioRef.current.src = defaultAudiosRef.current[tone.id].src;
-      }
+      audioRef.current.src = tone.url;
       audioRef.current.currentTime = 0;
       await audioRef.current.play();
       setPlayingTone(tone.id);
@@ -208,21 +204,24 @@ export default function Settings() {
     const reader = new FileReader();
     reader.onload = async () => {
       const dataURL = reader.result;
-      const newId = uuidv4();
+      const newId = `custom:${uuidv4()}`;
       const newItem = { id: newId, name: file.name, data: dataURL };
       try {
-        await addSoundToDB(newItem);
+        await addSoundToDB({ id: newId.split(":")[1], name: file.name, data: dataURL });
         setCustomSounds(prev => [newItem, ...prev]);
-        setAllTones(prev => [...prev, { id: `custom:${newId}`, label: file.name, url: dataURL }]);
-        setSettings(prev => ({ ...prev, selectedTone: `custom:${newId}` }));
+        const newTone = { id: newId, label: file.name, url: dataURL };
+        setAllTones(prev => [...prev, newTone]);
+        setSettings(prev => ({ ...prev, selectedTone: newId }));
 
         const audio = new Audio(dataURL);
+        audio.preload = "auto";
         audio.onloadedmetadata = () => {
           setDurations(prev => ({ ...prev, [newId]: audio.duration }));
+          playTone(newTone);
         };
+        defaultAudiosRef.current[newId] = audio;
 
-        playTone({ id: `custom:${newId}` });
-        setMessage({ type: "success", text: "Sound uploaded and saved!" });
+        setMessage({ type: "success", text: "Sound uploaded, saved, and activated!" });
       } catch (err) {
         console.log(err);
         setMessage({ type: "error", text: "Upload failed!" });
@@ -235,7 +234,7 @@ export default function Settings() {
   const removeCustom = async (id) => {
     try {
       await removeSoundFromDB(id);
-      setCustomSounds(prev => prev.filter(s => s.id !== id));
+      setCustomSounds(prev => prev.filter(s => s.id !== `custom:${id}`));
       setAllTones(prev => prev.filter(s => s.id !== `custom:${id}`));
 
       if (settings.selectedTone === `custom:${id}`) {

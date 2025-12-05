@@ -91,6 +91,7 @@ function saveSettings(settings) {
 export default function Settings() {
   const [settings, setSettings] = useState(loadSettings());
   const [customSounds, setCustomSounds] = useState([]);
+  const [allTones, setAllTones] = useState([...DEFAULT_TONES]);
   const [playingTone, setPlayingTone] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
@@ -99,12 +100,17 @@ export default function Settings() {
   const defaultAudiosRef = useRef({});
   const [durations, setDurations] = useState({});
 
-  // Load custom sounds and their durations
+  // Load custom sounds and merge
   useEffect(() => {
     getAllSoundsFromDB().then(sounds => {
-      setCustomSounds(sounds.reverse());
-      sounds.forEach(item => {
-        const audio = new Audio(item.data);
+      const reversed = sounds.reverse();
+      setCustomSounds(reversed);
+
+      const merged = [...DEFAULT_TONES, ...reversed.map(s => ({ id: `custom:${s.id}`, label: s.name, url: s.data }))];
+      setAllTones(merged);
+
+      merged.forEach(item => {
+        const audio = new Audio(item.url);
         audio.onloadedmetadata = () => {
           setDurations(prev => ({ ...prev, [item.id]: audio.duration }));
         };
@@ -112,7 +118,6 @@ export default function Settings() {
     });
   }, []);
 
-  // Preload default tones and durations
   useEffect(() => {
     DEFAULT_TONES.forEach(tone => {
       const audio = new Audio(tone.url);
@@ -124,7 +129,6 @@ export default function Settings() {
     });
   }, []);
 
-  // Audio setup
   useEffect(() => {
     audioRef.current.preload = "auto";
     audioRef.current.loop = false;
@@ -188,8 +192,8 @@ export default function Settings() {
     const file = e.target.files[0];
     if (!file) return;
 
-    // New: check file size (max 2MB)
-    const maxSizeMB = 2;
+    // Max size 3MB
+    const maxSizeMB = 3;
     if (file.size > maxSizeMB * 1024 * 1024) {
       setMessage({ type: "error", text: `File exceeds ${maxSizeMB}MB limit.` });
       e.target.value = "";
@@ -204,12 +208,14 @@ export default function Settings() {
       try {
         await addSoundToDB(newItem);
         setCustomSounds(prev => [newItem, ...prev]);
+        setAllTones(prev => [...prev, { id: `custom:${newId}`, label: file.name, url: dataURL }]);
         setSettings(prev => ({ ...prev, selectedTone: `custom:${newId}` }));
+
         const audio = new Audio(dataURL);
         audio.onloadedmetadata = () => {
           setDurations(prev => ({ ...prev, [newId]: audio.duration }));
         };
-        // Play the uploaded sound immediately
+
         playTone({ id: `custom:${newId}` });
         setMessage({ type: "success", text: "Sound uploaded and saved!" });
       } catch (err) {
@@ -225,6 +231,8 @@ export default function Settings() {
     try {
       await removeSoundFromDB(id);
       setCustomSounds(prev => prev.filter(s => s.id !== id));
+      setAllTones(prev => prev.filter(s => s.id !== `custom:${id}`));
+
       if (settings.selectedTone === `custom:${id}`) {
         setSettings(prev => ({ ...prev, selectedTone: DEFAULT_TONES[0].id }));
       }
@@ -305,11 +313,11 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Preset Tones */}
+        {/* All Tones */}
         <div className="border p-4 rounded-lg bg-gray-50">
-          <h2 className="font-semibold text-lg text-gray-700 mb-3">Preset Tones</h2>
+          <h2 className="font-semibold text-lg text-gray-700 mb-3">All Tones</h2>
           <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 ${isDisabledStyle}`}>
-            {DEFAULT_TONES.map(t => (
+            {allTones.map(t => (
               <div key={t.id} className={`flex items-center justify-between p-3 rounded ${settings.selectedTone === t.id ? "bg-indigo-50" : "bg-slate-50"}`}>
                 <label className="flex items-center gap-2 w-full" style={{ wordBreak: "break-word", whiteSpace: "normal" }}>
                   <input
@@ -321,42 +329,28 @@ export default function Settings() {
                   />
                   <span className="w-full">{t.label} ({formatTime(durations[t.id])})</span>
                 </label>
-                <button onClick={() => playTone(t)} className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded flex items-center justify-center" disabled={!settings.enabled}>
-                  {playingTone === t.id ? <FiPause /> : <FiPlay />}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => playTone(t)} className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded flex items-center justify-center" disabled={!settings.enabled}>
+                    {playingTone === t.id ? <FiPause /> : <FiPlay />}
+                  </button>
+                  {t.id.startsWith("custom:") && (
+                    <button onClick={() => setShowDeleteConfirm(t.id.split(":")[1])} className="px-2 py-1 bg-red-100 text-red-700 rounded" disabled={!settings.enabled}>
+                      <FiTrash2 />
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Custom Sounds */}
+        {/* Upload Custom */}
         <div className="border p-4 rounded-lg bg-gray-50">
-          <h2 className="font-semibold text-lg text-gray-700 mb-3">Custom Sounds</h2>
+          <h2 className="font-semibold text-lg text-gray-700 mb-3">Upload Custom Sound</h2>
           <label className={`inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded cursor-pointer mb-3 ${isDisabledStyle}`}>
             <FiUpload /> Upload
             <input type="file" className="hidden" accept="audio/*" onChange={onUpload} disabled={!settings.enabled}/>
           </label>
-
-          <div className={`space-y-2 ${isDisabledStyle}`}>
-            {customSounds.length === 0 && <div className="text-gray-400 text-sm">No custom sounds uploaded.</div>}
-            {customSounds.map(item => (
-              <div key={item.id} className={`flex items-center justify-between p-3 rounded ${settings.selectedTone === `custom:${item.id}` ? "bg-indigo-50" : "bg-slate-50"}`}>
-                <label className="flex items-center gap-2 w-full" style={{ wordBreak: "break-word", whiteSpace: "normal" }}>
-                  <input type="radio" name="tone" checked={settings.selectedTone === `custom:${item.id}`} onChange={() => setSettings(prev => ({ ...prev, selectedTone: `custom:${item.id}` }))} disabled={!settings.enabled}/>
-                  <span className="w-full">{item.name} ({formatTime(durations[item.id])})</span>
-                </label>
-
-                <div className="flex items-center gap-2">
-                  <button onClick={() => playTone({ id: `custom:${item.id}` })} className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded flex items-center justify-center" disabled={!settings.enabled}>
-                    {playingTone === `custom:${item.id}` ? <FiPause /> : <FiPlay />}
-                  </button>
-                  <button onClick={() => setShowDeleteConfirm(item.id)} className="px-2 py-1 bg-red-100 text-red-700 rounded" disabled={!settings.enabled}>
-                    <FiTrash2 />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
 

@@ -75,10 +75,13 @@ const DEFAULT_TONES = [
 const SETTINGS_KEY = "tf_settings_v7";
 
 function loadSettings() {
-  return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {
+  const stored = JSON.parse(localStorage.getItem(SETTINGS_KEY));
+  if (stored) return stored;
+  // Default settings at first load
+  return {
     enabled: true,
     volume: 80,
-    selectedTone: DEFAULT_TONES[0].id,
+    selectedTone: DEFAULT_TONES[0].id, // default first tone
     repeatCount: 2,
   };
 }
@@ -100,7 +103,7 @@ export default function Settings() {
   const defaultAudiosRef = useRef({});
   const [durations, setDurations] = useState({});
 
-  // Load custom sounds and merge
+  // Load custom sounds and merge with defaults
   useEffect(() => {
     getAllSoundsFromDB().then(sounds => {
       const reversed = sounds.reverse();
@@ -118,6 +121,7 @@ export default function Settings() {
     });
   }, []);
 
+  // Preload default tones
   useEffect(() => {
     DEFAULT_TONES.forEach(tone => {
       const audio = new Audio(tone.url);
@@ -129,6 +133,7 @@ export default function Settings() {
     });
   }, []);
 
+  // Audio setup
   useEffect(() => {
     audioRef.current.preload = "auto";
     audioRef.current.loop = false;
@@ -155,6 +160,7 @@ export default function Settings() {
 
   useEffect(() => { audioRef.current.volume = settings.volume / 100; }, [settings.volume]);
 
+  // Play tone function
   const playTone = async (tone) => {
     if (!settings.enabled) return;
     try {
@@ -192,7 +198,6 @@ export default function Settings() {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Max size 3MB
     const maxSizeMB = 3;
     if (file.size > maxSizeMB * 1024 * 1024) {
       setMessage({ type: "error", text: `File exceeds ${maxSizeMB}MB limit.` });

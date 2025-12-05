@@ -81,7 +81,7 @@ function loadSettings() {
   const defaultSettings = {
     enabled: true,
     volume: 80,
-    selectedTone: DEFAULT_TONES[0].id, // first tone by default
+    selectedTone: DEFAULT_TONES[0].id, // first tone activated by default (not played)
     repeatCount: 2,
   };
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(defaultSettings));
@@ -114,21 +114,8 @@ export default function Settings() {
       const merged = [...DEFAULT_TONES, ...reversed.map(s => ({ id: s.id, label: s.name, url: s.data }))];
       setAllTones(merged);
 
-      // Prioritize loading first tone for immediate playback
-      if (merged.length > 0 && !audioRef.current.src) {
-        const firstTone = merged[0];
-        audioRef.current.src = firstTone.url;
-        audioRef.current.preload = "auto";
-        audioRef.current.volume = settings.volume / 100;
-        audioRef.current.onloadedmetadata = () => {
-          setDurations(prev => ({ ...prev, [firstTone.id]: audioRef.current.duration }));
-          setPlayingTone(firstTone.id);
-        };
-      }
-
-      // Load rest of audios in background
-      merged.forEach((item, idx) => {
-        if (idx === 0) return; // first one handled
+      // Preload all audios for background use
+      merged.forEach(item => {
         const audio = new Audio(item.url);
         audio.preload = "auto";
         audio.onloadedmetadata = () => {
@@ -211,13 +198,13 @@ export default function Settings() {
         setCustomSounds(prev => [newItem, ...prev]);
         const newTone = { id: newId, label: file.name, url: dataURL };
         setAllTones(prev => [...prev, newTone]);
+        // Automatically set as selected (activated), but do not play
         setSettings(prev => ({ ...prev, selectedTone: newId }));
 
         const audio = new Audio(dataURL);
         audio.preload = "auto";
         audio.onloadedmetadata = () => {
           setDurations(prev => ({ ...prev, [newId]: audio.duration }));
-          playTone(newTone);
         };
         defaultAudiosRef.current[newId] = audio;
 

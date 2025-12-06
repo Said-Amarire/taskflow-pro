@@ -5,87 +5,73 @@ It offers a clean interface, real-time countdown timers, smart alarms, manual dr
 
 Designed with a strong focus on **productivity, UX quality, and long-term clarity**, TaskFlow Pro allows users to create, manage, prioritize, and reorder tasks effortlessly.
 
+🌐 **Live Demo:** [https://pro-taskflow.vercel.app](https://pro-taskflow.vercel.app)
+
 ---
 
 ## 🌟 Features
 
-### ✅ **Smart Task Creation**
-- Title + description  
-- Priority selector (Low / Medium / High) with colors  
-- Due date + due time (with visual labels)  
-- Alarm toggle with clear bell icon  
-- Full validation (priority required, errors highlighted in red)
+### ✅ Smart Task Creation
+- Add **title** and **description** for each task.  
+- Select **priority level** (Low / Medium / High) with color-coded visual indicators.  
+- Set **due date and time** with clear visual labels.  
+- Toggle **alarms** for important tasks using a bell icon.  
+- Full **validation system** to ensure no empty or invalid tasks are created; errors are highlighted in red.
+
+### 🎨 Beautiful & Responsive UI
+- Clean, modern dashboard layout.  
+- Zero outer margins between tasks for compact mode.  
+- Automatic spacing between cards only at top/bottom.  
+- Mobile-first responsive design ensures usability on phones and tablets.  
+- Consistent and professional color palette across the app.  
+- Smooth animations for interactions like drag-and-drop, task completion, and hover effects.
+
+### ⏳ Real-Time Countdown Timer
+- Live countdown until task deadline.  
+- Countdown disappears when a task is completed.  
+- Automatically stops if a task finishes before the due date.
+
+### 🔔 Smart Alarm System
+- Global alarm system works across all pages.  
+- Alarm uses a bell icon and optional text label.  
+- Plays selected sound automatically.  
+- Cannot be muted unintentionally.  
+- Stops automatically when:
+  - Task is marked as completed.  
+  - Deadline passes.  
+  - User disables the alarm.  
+
+### 💾 Persistent Storage
+- All data is stored automatically using **localStorage**.  
+- Persistent items include:
+  - Tasks  
+  - Completion state  
+  - Manual task order  
+  - Alarm states  
+  - Task metadata (title, description, priority, due date/time)  
+
+### 🔀 Manual Drag-and-Drop Ordering
+- Users can manually reorder tasks using drag-and-drop.  
+- Order is **saved instantly** and persists across page reloads and browser sessions.  
+- New tasks always appear at the top without breaking the saved custom order.  
+- Optimized for large task lists to maintain performance and usability.
+
+### 🎯 Task Completion Experience
+- Completed tasks are visually distinguished with a **light purple background**.  
+- Countdown disappears once completed.  
+- Alarms stop automatically.  
+- Due date remains visible for reference.  
+- “Completed at” timestamp is saved.
 
 ---
 
-### 🎨 **Beautiful & Responsive UI**
-- Clean modern dashboard layout  
-- Zero outer margins between tasks (compact mode)  
-- Auto-spacing only top/bottom between cards  
-- Mobile-first responsive design  
-- Consistent color palette across the app  
-- Smooth animations
-
----
-
-### 🔥 **Real-Time Countdown Timer**
-- Each task shows a live countdown until the deadline  
-- Countdown disappears when task is completed  
-- Countdown also stops if task is finished before time  
-
----
-
-### 🔔 **Smart Alarm System**
-- Runs above all pages (global)  
-- Bell icon + alarm label  
-- Plays the selected sound automatically  
-- Cannot be muted  
-- Works even if user navigates between pages  
-- Alarm stops automatically when:
-  - Task is completed  
-  - Deadline passes  
-  - User disables alarm  
-
----
-
-### 💾 **Persistent Storage**
-Everything is saved automatically:
-- Tasks  
-- Completion state  
-- Manual order  
-- Alarm states  
-- Task metadata  
-
-Stored using **localStorage** via a custom storage utility.
-
----
-
-### 🔀 **Manual Drag-and-Drop Ordering (Saved Permanently)**
-- User can drag tasks manually  
-- Order is saved instantly  
-- Even if user refreshes the page or leaves  
-- New tasks always appear **at the top**, without breaking the saved custom order  
-- Perfect for large task lists
-
----
-
-### 🎯 **Task Completion Experience**
-When user completes a task:
-- Background color becomes **light purple**  
-- Countdown disappears  
-- Alarm stops  
-- Due date stays visible  
-- “Completed at” timestamp is saved  
-
----
-
-### 🧭 **Pages Included**
-- **Dashboard** — stats & overview  
-- **Tasks** — full task management system  
-- **Archive** — old/finished tasks  
-- **Settings** — theme + preferences  
-- **Profile** — user info  
-- **NotFound** — beautiful custom 404 page  
+## 🧭 Pages Included
+- **Dashboard** — Task overview and statistics.  
+- **Tasks** — Main task management interface.  
+- **Archive** — Stores completed or old tasks.  
+- **Settings** — Customize app preferences, theme, and alarm options.  
+- **Profile** — User information and customization.  
+- **NotFound** — Custom 404 page with friendly UI.
 
 ---
 
@@ -94,12 +80,12 @@ When user completes a task:
 | Technology | Usage |
 |-----------|--------|
 | **React 18** | App logic & UI |
-| **Vite** | Development environment |
-| **Tailwind CSS** | Styling |
-| **UUID** | Unique task IDs |
-| **React Icons** | Icons (FiBell, etc.) |
-| **LocalStorage** | Persistent data |
-| **Custom Alarm Engine** | Sound + timing |
+| **Vite** | Fast development and bundling |
+| **Tailwind CSS** | Responsive styling |
+| **UUID** | Generate unique task IDs |
+| **React Icons** | Icons for UI (FiBell, FiPlay, FiPause, etc.) |
+| **LocalStorage** | Persistent storage for tasks and settings |
+| **Custom Alarm Engine** | Global sound notifications & timing |
 
 ---
 

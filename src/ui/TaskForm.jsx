@@ -11,6 +11,7 @@ export default function TaskForm({ onAdd }) {
   const [priority, setPriority] = useState('')
   const [alarmEnabled, setAlarmEnabled] = useState(false)
   const [priorityError, setPriorityError] = useState(false)
+  const [titleError, setTitleError] = useState(false)
   const [showForm, setShowForm] = useState(false)
 
   const [minDate, setMinDate] = useState('')
@@ -45,7 +46,14 @@ export default function TaskForm({ onAdd }) {
   const submit = (e) => {
     e.preventDefault()
 
+    // Validate title and priority
     let valid = true
+    if (!title.trim()) {
+      setTitleError(true)
+      valid = false
+    } else {
+      setTitleError(false)
+    }
 
     if (!priority) {
       setPriorityError(true)
@@ -53,6 +61,8 @@ export default function TaskForm({ onAdd }) {
     } else {
       setPriorityError(false)
     }
+
+    if (!valid) return
 
     if (alarmEnabled) {
       if (!dueDate) {
@@ -69,10 +79,7 @@ export default function TaskForm({ onAdd }) {
         setTimeError(false)
       }
 
-      if (!valid) {
-        alert('⚠️ To enable the alarm, please select a valid due date and time.')
-        return
-      }
+      if (!valid) return
     }
 
     let due = null
@@ -83,10 +90,7 @@ export default function TaskForm({ onAdd }) {
       dateObj.setHours(hours % 24, minutes || 0, seconds || 0, 0)
 
       const now = new Date()
-      if (dateObj <= now) {
-        alert('⚠️ Please select a future date and time!')
-        return
-      }
+      if (dateObj <= now) return
 
       due = dateObj.toISOString()
     }
@@ -113,6 +117,8 @@ export default function TaskForm({ onAdd }) {
     setPriority('')
     setAlarmEnabled(false)
     setShowForm(false)
+    setTitleError(false)
+    setPriorityError(false)
   }
 
   const priorityColor = (p) => {
@@ -147,7 +153,9 @@ export default function TaskForm({ onAdd }) {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Task title"
-              className="flex-1 min-w-[150px] border border-gray-300 p-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              className={`flex-1 min-w-[150px] border p-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none ${
+                titleError ? 'border-red-500' : 'border-gray-300'
+              }`}
             />
 
             <div className="flex gap-2 flex-wrap">
@@ -183,11 +191,6 @@ export default function TaskForm({ onAdd }) {
               <label className="text-sm font-semibold mb-1">
                 Priority <span className="text-red-500">*</span>
               </label>
-              {priorityError && (
-                <span className="text-red-600 text-xs mb-1">
-                  Please select a priority
-                </span>
-              )}
               <select
                 value={priority}
                 onChange={(e) => setPriority(e.target.value)}

@@ -91,13 +91,25 @@ function TaskItem({ t, onToggle, onDelete, onEdit, moveUp, moveDown, isFirst, is
 
     const updatedTask = { ...t, title, description, priority, due, alarmEnabled, alarmPlayedAt: null }
 
-    // Update tf_tasks immediately for Header notifications
+    // Update tf_tasks for Header notifications
     const tasks = load('tf_tasks', [])
     const updatedTasks = tasks.map(task => (task.id === t.id ? updatedTask : task))
     save('tf_tasks', updatedTasks)
 
     onEdit(t.id, updatedTask)
     setEditing(false)
+  }
+
+  const snoozeTask = (minutes = 5) => {
+    const tasks = load('tf_tasks', [])
+    const updatedTasks = tasks.map(task => {
+      if (task.id === t.id) {
+        const newDue = new Date(Date.now() + minutes * 60000)
+        return { ...task, due: newDue.toISOString(), alarmPlayedAt: null }
+      }
+      return task
+    })
+    save('tf_tasks', updatedTasks)
   }
 
   return (
@@ -111,7 +123,6 @@ function TaskItem({ t, onToggle, onDelete, onEdit, moveUp, moveDown, isFirst, is
               const completedAt = !t.done ? new Date().toISOString() : null
               onToggle(t.id, completedAt)
 
-              // Update tf_tasks for Header notifications
               const tasks = load('tf_tasks', [])
               const updatedTasks = tasks.map(task => task.id === t.id ? { ...task, done: !t.done, completedAt } : task)
               save('tf_tasks', updatedTasks)
@@ -122,12 +133,10 @@ function TaskItem({ t, onToggle, onDelete, onEdit, moveUp, moveDown, isFirst, is
             {editing ? (
               <>
                 <input value={title} onChange={e => setTitle(e.target.value)} className="border border-gray-300 p-1 rounded w-full focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Title" />
-                
                 <div className="flex gap-2 mt-1 flex-wrap">
                   <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} min={new Date().toISOString().slice(0,10)} className="border border-gray-300 p-1 rounded focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
                   <input type="time" step="1" value={dueTime} onChange={e => setDueTime(e.target.value)} min={dueDate === new Date().toISOString().slice(0,10) ? new Date().toISOString().slice(11,19) : '00:00:00'} className="border border-gray-300 p-1 rounded focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
                 </div>
-
                 <select value={priority} onChange={e => setPriority(e.target.value)} className={`border p-1 rounded w-full focus:ring-2 focus:outline-none mt-1 ${
                   priority === 'High' ? 'border-red-500' :
                   priority === 'Medium' ? 'border-yellow-500' :
@@ -138,7 +147,6 @@ function TaskItem({ t, onToggle, onDelete, onEdit, moveUp, moveDown, isFirst, is
                   <option value="Medium">Medium</option>
                   <option value="High">High</option>
                 </select>
-
                 <label className="flex items-center gap-2 mt-2">
                   <input
                     type="checkbox"
@@ -149,7 +157,6 @@ function TaskItem({ t, onToggle, onDelete, onEdit, moveUp, moveDown, isFirst, is
                   <FiBell className="text-indigo-600" />
                   <span className="text-sm">Enable alarm</span>
                 </label>
-
                 <textarea
                   ref={descriptionRef}
                   value={description}
@@ -205,6 +212,9 @@ function TaskItem({ t, onToggle, onDelete, onEdit, moveUp, moveDown, isFirst, is
           <>
             <button onClick={() => setEditing(true)} className="text-sm px-2 py-1 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors">Edit</button>
             <button onClick={() => onDelete(t.id)} className="text-sm px-2 py-1 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors">Delete</button>
+            {t.alarmEnabled && !t.done && (
+              <button onClick={() => snoozeTask(5)} className="text-sm px-2 py-1 bg-yellow-50 text-yellow-700 rounded-lg hover:bg-yellow-100 transition-colors">Snooze 5 min</button>
+            )}
           </>
         )}
       </div>

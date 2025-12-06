@@ -213,7 +213,7 @@ function TaskItem({ t, onToggle, onDelete, onEdit, moveUp, moveDown, isFirst, is
             <button onClick={() => setEditing(true)} className="text-sm px-2 py-1 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors">Edit</button>
             <button onClick={() => onDelete(t.id)} className="text-sm px-2 py-1 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors">Delete</button>
             {t.alarmEnabled && !t.done && (
-              <button onClick={() => snoozeTask(5)} className="text-sm px-2 py-1 bg-yellow-50 text-yellow-700 rounded-lg hover:bg-yellow-100 transition-colors"></button>
+              <button onClick={() => snoozeTask(5)} className=""></button>
             )}
           </>
         )}

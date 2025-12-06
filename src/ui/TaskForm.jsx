@@ -148,15 +148,20 @@ export default function TaskForm({ onAdd }) {
           className="w-full flex flex-col md:flex-row flex-wrap gap-3 p-4 bg-white border border-gray-200 rounded-xl shadow-lg mt-4"
         >
           <div className="flex-1 flex flex-col md:flex-row md:gap-3 flex-wrap w-full">
-            <input
-              aria-label="Task title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Task title"
-              className={`flex-1 min-w-[150px] border p-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none ${
-                titleError ? 'border-red-500' : 'border-gray-300'
-              }`}
-            />
+            <div className="flex flex-col flex-1">
+              <input
+                aria-label="Task title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Task title"
+                className={`flex-1 min-w-[150px] border p-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all ${
+                  titleError ? 'border-red-500 animate-shake' : 'border-gray-300'
+                }`}
+              />
+              {titleError && (
+                <span className="text-red-500 text-xs mt-1">Title is required</span>
+              )}
+            </div>
 
             <div className="flex gap-2 flex-wrap">
               <div className="flex flex-col">
@@ -194,8 +199,8 @@ export default function TaskForm({ onAdd }) {
               <select
                 value={priority}
                 onChange={(e) => setPriority(e.target.value)}
-                className={`border p-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none ${
-                  priorityError ? 'border-red-500' : priorityColor(priority)
+                className={`border p-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all ${
+                  priorityError ? 'border-red-500 animate-shake' : priorityColor(priority)
                 }`}
               >
                 <option value="" disabled>Select priority</option>
@@ -203,6 +208,9 @@ export default function TaskForm({ onAdd }) {
                 <option value="Medium" className="bg-yellow-200 text-yellow-700">Medium</option>
                 <option value="High" className="bg-red-200 text-red-700">High</option>
               </select>
+              {priorityError && (
+                <span className="text-red-500 text-xs mt-1">Priority is required</span>
+              )}
             </div>
 
             <label className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg mt-2 cursor-pointer">
@@ -233,6 +241,18 @@ export default function TaskForm({ onAdd }) {
             rows={5}
             className="w-full border border-gray-300 p-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none resize-none mt-2 md:mt-4 overflow-hidden"
           />
+
+          {/* Shake Animation */}
+          <style jsx>{`
+            @keyframes shake {
+              0%, 100% { transform: translateX(0); }
+              20%, 60% { transform: translateX(-4px); }
+              40%, 80% { transform: translateX(4px); }
+            }
+            .animate-shake {
+              animation: shake 0.3s ease;
+            }
+          `}</style>
         </form>
       )}
     </>

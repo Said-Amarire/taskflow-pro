@@ -24,17 +24,15 @@ export default function Archive() {
 
   const [popup, setPopup] = useState({
     show: false,
-    type: '', // 'restore' or 'delete'
+    type: '',
     taskId: null
   })
 
-  // Update countdown every second
   useEffect(() => {
     const interval = setInterval(() => setTimer(prev => prev + 1), 1000)
     return () => clearInterval(interval)
   }, [])
 
-  // Auto-delete expired tasks
   useEffect(() => {
     const cleanedArchive = archive.filter(t => getTimeRemaining(t.deletedAt) !== null)
     if (cleanedArchive.length !== archive.length) {
@@ -59,7 +57,6 @@ export default function Archive() {
       setArchive(newArchive)
       save('tf_archive', newArchive)
 
-      // ✅ Increment permanent deleted tasks counter
       incrementPermanentDeleted()
     }
     setPopup({ show: false, type: '', taskId: null })
@@ -70,12 +67,13 @@ export default function Archive() {
   }
 
   return (
-    <div className="w-full min-h-screen bg-gray-50 p-4">
-
-      <h1 className="text-3xl font-bold mb-6 text-indigo-700">Archived Tasks</h1>
+    <div className="w-full min-h-screen bg-gray-50 p-6 md:p-8">
+      <h1 className="text-2xl md:text-3xl font-bold mb-6 text-indigo-700 text-center md:text-left">
+        Archived Tasks
+      </h1>
 
       {archive.length === 0 && (
-        <p className="text-gray-500 text-lg">No archived tasks yet.</p>
+        <p className="text-gray-500 text-lg text-center mt-10">No archived tasks yet.</p>
       )}
 
       <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -93,32 +91,32 @@ export default function Archive() {
           return (
             <li
               key={t.id}
-              className="bg-white p-4 rounded-2xl shadow-lg border border-gray-200 flex flex-col justify-between hover:scale-102 transition-transform duration-200"
+              className="bg-white p-6 rounded-3xl shadow-lg border border-gray-200 flex flex-col justify-between hover:scale-[1.03] transition-transform duration-300 hover:shadow-2xl"
             >
               <div>
-                <h3 className="font-semibold text-lg text-indigo-700">{t.title}</h3>
+                <h3 className="font-bold text-xl md:text-2xl text-indigo-700 mb-2">{t.title}</h3>
                 {t.description && (
-                  <p className="text-gray-600 mt-1 text-sm">{t.description}</p>
+                  <p className="text-gray-600 mt-1 text-sm md:text-base">{t.description}</p>
                 )}
-                <div className="text-xs text-gray-500 mt-2">
+                <div className="text-xs md:text-sm text-gray-500 mt-3">
                   Deleted at: {new Date(t.deletedAt).toLocaleString()}
                 </div>
-                <div className="text-xs text-red-600 mt-1 font-medium">
+                <div className="text-xs md:text-sm text-red-600 mt-2 font-medium">
                   Will be permanently deleted in: {days}d {hours}h {minutes}m {seconds}s
                 </div>
               </div>
 
-              <div className="flex gap-2 mt-4 flex-wrap">
+              <div className="flex gap-2 mt-5 flex-wrap">
                 <button
                   onClick={() => setPopup({ show: true, type: 'restore', taskId: t.id })}
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-semibold"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-xl hover:bg-green-200 transition-colors font-semibold text-sm md:text-base shadow-md"
                 >
                   <FaUndo /> Restore
                 </button>
 
                 <button
                   onClick={() => setPopup({ show: true, type: 'delete', taskId: t.id })}
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-semibold"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-xl hover:bg-red-200 transition-colors font-semibold text-sm md:text-base shadow-md"
                 >
                   <FaTrashAlt /> Delete Permanently
                 </button>
@@ -130,29 +128,30 @@ export default function Archive() {
 
       {/* Confirmation Popup */}
       {popup.show && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl text-center">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-sm w-full shadow-2xl text-center animate-popup">
+            <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-4">
               {popup.type === 'restore' ? 'Confirm Restore?' : 'Confirm Permanent Delete?'}
             </h2>
-            <p className="text-sm text-gray-500 mb-6">
+            <p className="text-sm md:text-base text-gray-500 mb-6">
               {popup.type === 'restore'
                 ? 'Do you want to restore this task back to your tasks?'
                 : 'This action cannot be undone. Are you sure you want to delete it permanently?'}
             </p>
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 md:flex-row justify-center">
               <button
                 onClick={confirmAction}
-                className={popup.type === 'restore'
-                  ? 'px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold'
-                  : 'px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold'
-                }
+                className={`px-4 py-2 md:px-6 md:py-3 rounded-xl text-white font-semibold transition-colors ${
+                  popup.type === 'restore'
+                    ? 'bg-green-600 hover:bg-green-700'
+                    : 'bg-red-600 hover:bg-red-700'
+                }`}
               >
                 {popup.type === 'restore' ? 'Yes, Restore' : 'Yes, Delete'}
               </button>
               <button
                 onClick={cancelAction}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
+                className="px-4 py-2 md:px-6 md:py-3 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold transition-colors"
               >
                 Cancel
               </button>
@@ -160,6 +159,16 @@ export default function Archive() {
           </div>
         </div>
       )}
+
+      <style jsx>{`
+        @keyframes popupIn {
+          0% { opacity: 0; transform: scale(0.9); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+        .animate-popup {
+          animation: popupIn 0.25s ease-out;
+        }
+      `}</style>
     </div>
   )
 }

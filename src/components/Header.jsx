@@ -1,5 +1,6 @@
 // src/components/Header.jsx
 import React, { useEffect, useState, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import logoImg from '../assets/logo.webp'
 import { FiUser, FiBell, FiCheck, FiClock, FiPlus, FiMinus } from 'react-icons/fi'
 import { load, save } from '../utils/storage'
@@ -7,7 +8,7 @@ import { load, save } from '../utils/storage'
 const NOTIFICATIONS_KEY = 'tf_notifications'
 const DB_NAME = 'TaskFlowDB'
 const STORE_NAME = 'custom_sounds'
-const FALLBACK_TONE = '/tones/tone1.mp3' // default initial tone
+const FALLBACK_TONE = '/tones/tone1.mp3'
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -34,6 +35,8 @@ function getAllSoundsFromDB() {
 }
 
 export default function Header() {
+  const navigate = useNavigate()
+
   const [user, setUser] = useState({ name: 'Said Amarire', avatar: null })
   const [showHeader, setShowHeader] = useState(true)
   const lastScrollY = useRef(0)
@@ -54,7 +57,7 @@ export default function Header() {
   /* LOAD USER */
   useEffect(() => {
     const interval = setInterval(() => {
-      const storedUser = JSON.parse(localStorage.getItem('user_profile')) || { name: 'Said Amarire', avatar: null }
+      const storedUser = JSON.parse(localStorage.getItem('user_profile')) || { name: 'Amarire', avatar: null }
       setUser(storedUser)
     }, 1000)
     return () => clearInterval(interval)
@@ -230,7 +233,13 @@ export default function Header() {
         }`}
       >
         <div className="w-full flex items-center justify-between px-4 md:px-6 py-1.5">
-          <img src={logoImg} alt="Logo" className="h-12 md:h-14 w-auto" />
+          {/* Logo */}
+          <img
+            src={logoImg}
+            alt="Logo"
+            className="h-12 md:h-14 w-auto cursor-pointer"
+            onClick={() => navigate('/')}
+          />
 
           <div className="flex items-center gap-3 md:gap-5">
             {/* Notification Icon */}
@@ -252,11 +261,17 @@ export default function Header() {
             </div>
 
             {user.avatar ? (
-              <div className="w-12 md:w-14 h-12 md:h-14 rounded-2xl overflow-hidden border-2 border-gray-200">
+              <div
+                className="w-12 md:w-14 h-12 md:h-14 rounded-2xl overflow-hidden border-2 border-gray-200 cursor-pointer"
+                onClick={() => navigate('/profile')}
+              >
                 <img src={user.avatar} className="w-full h-full object-cover" />
               </div>
             ) : (
-              <FiUser className="text-gray-500 w-12 md:w-14 h-12 md:h-14 bg-gray-100 p-2 rounded-2xl" />
+              <FiUser
+                className="text-gray-500 w-12 md:w-14 h-12 md:h-14 bg-gray-100 p-2 rounded-2xl cursor-pointer"
+                onClick={() => navigate('/profile')}
+              />
             )}
           </div>
         </div>

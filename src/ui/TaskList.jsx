@@ -67,7 +67,6 @@ function TaskItem({ t, onToggle, onDelete, onEdit, moveUp, moveDown, isFirst, is
   }, [t.due, t.done])
 
   const saveTask = () => {
-    // Validate date & time if alarm is enabled
     if (alarmEnabled) {
       if (!dueDate || !dueTime) {
         alert('⚠️ To enable the alarm, please select a valid due date and time.')
@@ -90,7 +89,14 @@ function TaskItem({ t, onToggle, onDelete, onEdit, moveUp, moveDown, isFirst, is
       due = dateObj.toISOString()
     }
 
-    onEdit(t.id, { title, description, priority, due, alarmEnabled, alarmPlayedAt: null })
+    const updatedTask = { ...t, title, description, priority, due, alarmEnabled, alarmPlayedAt: null }
+
+    // Update tf_tasks immediately for Header notifications
+    const tasks = load('tf_tasks', [])
+    const updatedTasks = tasks.map(task => (task.id === t.id ? updatedTask : task))
+    save('tf_tasks', updatedTasks)
+
+    onEdit(t.id, updatedTask)
     setEditing(false)
   }
 
@@ -104,6 +110,11 @@ function TaskItem({ t, onToggle, onDelete, onEdit, moveUp, moveDown, isFirst, is
             onChange={() => {
               const completedAt = !t.done ? new Date().toISOString() : null
               onToggle(t.id, completedAt)
+
+              // Update tf_tasks for Header notifications
+              const tasks = load('tf_tasks', [])
+              const updatedTasks = tasks.map(task => task.id === t.id ? { ...task, done: !t.done, completedAt } : task)
+              save('tf_tasks', updatedTasks)
             }}
             className="mt-1 h-5 w-5 accent-indigo-600"
           />

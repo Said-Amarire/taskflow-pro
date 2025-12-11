@@ -140,7 +140,7 @@ taskflow-pro/
 ### 1️⃣ Clone the repository
 
 ```sh
-git clone https://github.com/YOUR-USERNAME/taskflow-pro.git
+git clone https://github.com/Said-Amarire/taskflow-pro.git
 cd taskflow-pro
 ```
 
@@ -154,7 +154,7 @@ npm run dev
 npm run build
 
 ### 🎞️ Demo Video
-👉 https://your-demo-video-link.com
+👉 https://www.youtube.com/watch?v=VFkw6ti6o7U
 
 ### 🎨 UI/UX Design (Figma)
 👉 https://your-figma-design-link.com

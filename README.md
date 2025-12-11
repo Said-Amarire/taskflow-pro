@@ -156,12 +156,6 @@ npm run build
 ### 🎞️ Demo Video
 👉 https://www.youtube.com/watch?v=VFkw6ti6o7U
 
-### 🎨 UI/UX Design (Figma)
-👉 https://your-figma-design-link.com
-
-### 🎤 Presentation Slides
-👉 https://your-slides-link.com
-
 ### 🧠 Best Practices Used
 - Clean component architecture
 - Modular reusable UI blocks
